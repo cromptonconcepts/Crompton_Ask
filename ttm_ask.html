@@ -945,8 +945,8 @@
             <div id="startupPanel" class="startup-panel" aria-live="polite">
                 <div class="startup-panel-header">
                     <div>
-                        <h2 class="startup-panel-title">Local startup required</h2>
-                        <p class="startup-panel-subtitle">This page depends on a local backend service. When you open the HTML directly, the assistant cannot continue until the backend responds.</p>
+                        <h2 id="startupPanelTitle" class="startup-panel-title">Local startup required</h2>
+                        <p id="startupPanelSubtitle" class="startup-panel-subtitle">This page depends on a local backend service. When you open the HTML directly, the assistant cannot continue until the backend responds.</p>
                     </div>
                     <div id="startupBadge" class="startup-status-badge">Offline</div>
                 </div>
@@ -1041,8 +1041,9 @@
     <script>
         const IS_FILE_PROTOCOL = window.location.protocol === 'file:';
         const IS_LOCAL_HOST = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+        const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io');
         const ENABLE_LOCAL_LAUNCHER = IS_FILE_PROTOCOL || IS_LOCAL_HOST;
-        let apiBase = IS_FILE_PROTOCOL
+        let apiBase = (IS_FILE_PROTOCOL || IS_GITHUB_PAGES)
             ? (localStorage.getItem('ttmAskApiBase') || 'http://localhost:5000')
             : window.location.origin;
         const LAUNCHER_BASE = 'http://localhost:5001';
@@ -1099,6 +1100,8 @@
         function updateStartupPanelStatus(message) {
             const panel = document.getElementById('startupPanel');
             const badge = document.getElementById('startupBadge');
+            const title = document.getElementById('startupPanelTitle');
+            const subtitle = document.getElementById('startupPanelSubtitle');
             const openMode = document.getElementById('startupOpenMode');
             const apiBaseValue = document.getElementById('startupApiBase');
             const healthUrlValue = document.getElementById('startupHealthUrl');
@@ -1123,9 +1126,20 @@
             healthLink.href = getHealthUrl();
             apiBaseInput.value = getApiBase();
             lastCheck.textContent = message || (backendOnline ? 'Connected' : 'Not connected');
-            hint.textContent = IS_FILE_PROTOCOL
-                ? 'Default local URL: http://localhost:5000. Change it here if your backend runs on a different port or host.'
-                : 'This page is using its current web origin as the backend API base.';
+
+            if (IS_GITHUB_PAGES) {
+                title.textContent = 'Backend server required';
+                subtitle.textContent = 'This is the static GitHub Pages frontend. Set the API URL to a running backend server, then retry.';
+                hint.textContent = 'Default API URL is http://localhost:5000. Use that only if your backend runs on this machine; otherwise enter your server URL.';
+            } else if (IS_FILE_PROTOCOL) {
+                title.textContent = 'Local startup required';
+                subtitle.textContent = 'This page depends on a local backend service. When you open the HTML directly, the assistant cannot continue until the backend responds.';
+                hint.textContent = 'Default local URL: http://localhost:5000. Change it here if your backend runs on a different port or host.';
+            } else {
+                title.textContent = 'Backend startup required';
+                subtitle.textContent = 'This web page needs a reachable backend API service before it can answer questions.';
+                hint.textContent = 'This page is using its current web origin as the backend API base.';
+            }
             startBtn.style.display = ENABLE_LOCAL_LAUNCHER && !backendOnline ? 'inline-flex' : 'none';
         }
 
@@ -1234,9 +1248,11 @@
                 setBackendStatus(true, `Backend connected. Sync status: ${syncStatus}.`);
                 return true;
             } catch (error) {
-                const offlineMessage = ENABLE_LOCAL_LAUNCHER
-                    ? 'Backend offline. Click "▶ Start Services" or open "Start Crompton_AI.vbs". Retrying\u2026'
-                    : 'Backend offline. Check the shared server service and try again.';
+                const offlineMessage = IS_GITHUB_PAGES
+                    ? 'Backend offline. GitHub Pages hosts only the frontend. Set API URL, then click Retry connection.'
+                    : (ENABLE_LOCAL_LAUNCHER
+                        ? 'Backend offline. Click "▶ Start Services" or open "Start Crompton_AI.vbs". Retrying\u2026'
+                        : 'Backend offline. Check the shared server service and try again.');
                 setBackendStatus(false, offlineMessage);
                 // Auto-retry every 3 seconds until backend comes online
                 setTimeout(async () => {
@@ -1389,14 +1405,24 @@
                 }
             } catch (error) {
                 renderSidebarDocuments([]);
-                setBackendStatus(false, 'Backend offline. Start app.py, then refresh this page.');
+                setBackendStatus(
+                    false,
+                    IS_GITHUB_PAGES
+                        ? 'Backend offline. Configure API URL for your backend, then retry connection.'
+                        : 'Backend offline. Start app.py, then refresh this page.'
+                );
             }
         }
 
         // 2. SEARCH & Q&A LOGIC (Backend-connected)
         async function askQuestion() {
             if (!backendOnline) {
-                addMessage('Backend is offline. Start app.py first, then ask your question again.', 'system');
+                addMessage(
+                    IS_GITHUB_PAGES
+                        ? 'Backend is offline. This GitHub Pages site is frontend-only. Set API URL to your running backend and retry.'
+                        : 'Backend is offline. Start app.py first, then ask your question again.',
+                    'system'
+                );
                 return;
             }
 
@@ -1499,7 +1525,12 @@
                 } catch (error) {
                     removeMessage(loadingId);
                     if (streamMsgDiv) streamMsgDiv.remove();
-                    setBackendStatus(false, 'Backend offline. Start app.py, then refresh this page.');
+                    setBackendStatus(
+                        false,
+                        IS_GITHUB_PAGES
+                            ? 'Backend offline. Configure API URL for your backend, then retry connection.'
+                            : 'Backend offline. Start app.py, then refresh this page.'
+                    );
                     addMessage(error.message || 'Error connecting to the backend server.', 'system');
                 }
                 return;
@@ -1557,7 +1588,12 @@
                         'system'
                     );
                 } else {
-                    setBackendStatus(false, 'Backend offline. Start app.py, then refresh this page.');
+                    setBackendStatus(
+                        false,
+                        IS_GITHUB_PAGES
+                            ? 'Backend offline. Configure API URL for your backend, then retry connection.'
+                            : 'Backend offline. Start app.py, then refresh this page.'
+                    );
                     addMessage(error.message || 'Error connecting to the backend server.', 'system');
                 }
             }
