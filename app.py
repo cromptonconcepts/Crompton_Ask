@@ -63,7 +63,7 @@ GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-1.5-flash")
 GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "models/embedding-001")
 os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY", "").strip()
 GOOGLE_API_KEY = os.environ["GOOGLE_API_KEY"]
-UI_FILE = os.path.join(BASE_DIR, "ttm_ask.html")
+UI_FILE = os.path.join(BASE_DIR, "index.html")
 
 cors_origins = os.getenv("TTM_ASK_CORS_ORIGINS", "*")
 if cors_origins.strip() == "*":

@@ -1555,8 +1555,8 @@
                 
                 const data = await response.json();
                 if (!response.ok) {
-                    if (data.error_code === 'ollama_offline') {
-                        throw Object.assign(new Error('ollama_offline'), { isOllamaError: true });
+                    if (data.error_code === 'gemini_auth_error') {
+                        throw Object.assign(new Error('gemini_auth_error'), { isGeminiAuthError: true });
                     }
                     throw new Error(data.error || 'Backend request failed.');
                 }
@@ -1578,13 +1578,12 @@
                 
             } catch (error) {
                 removeMessage(loadingId);
-                if (error.isOllamaError) {
+                if (error.isGeminiAuthError) {
                     addMessage(
-                        '⚠️ Ollama is not running.\n\n' +
-                        'Ollama is the local AI engine that powers answers. To fix this:\n\n' +
-                        '1. Download and install Ollama from https://ollama.com\n' +
-                        '2. After installing, open a terminal and run:  ollama pull qwen2.5:7b\n' +
-                        '3. Then click "▶ Start Services" in the header (or restart via Start Crompton_AI.vbs)',
+                        'Gemini authentication failed.\n\n' +
+                        '1. Set GOOGLE_API_KEY to a valid Gemini API key on the backend machine.\n' +
+                        '2. Restart the backend service.\n' +
+                        '3. Retry your question.',
                         'system'
                     );
                 } else {
